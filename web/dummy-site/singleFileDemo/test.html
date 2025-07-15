@@ -105,10 +105,10 @@
         }
         // flatten data and log normalize
         const flatData = new Float32Array(1 * 1 * height * width);
-        let globalMin = Infinity;
-        let globalMax = -Infinity;
+        // let globalMin = Infinity;
+        // let globalMax = -Infinity;
 
-        // Compute log-mel and track min/max
+        // Compute log-mel
         const logMelSpectrogram = [];
         for (let x = 0; x < width; x++) {
             const logFrame = [];
@@ -117,20 +117,20 @@
                 if (!isFinite(val) || val <= 0) val = 1e-10;
                 const logVal = Math.log10(val);
                 logFrame.push(logVal);
-                if (logVal < globalMin) globalMin = logVal;
-                if (logVal > globalMax) globalMax = logVal;
             }
             logMelSpectrogram.push(logFrame);
         }
 
-        // Normalize to [-1, 1]
+        // Flatten for mean/std calculation
+        const allLogVals = logMelSpectrogram.flat();
+        const mean = allLogVals.reduce((a, b) => a + b, 0) / allLogVals.length;
+        const std = Math.sqrt(allLogVals.reduce((a, b) => a + (b - mean) ** 2, 0) / allLogVals.length);
+
+        // Normalize using mean/std
         for (let y = 0; y < height; y++) {
             for (let x = 0; x < width; x++) {
                 const logVal = logMelSpectrogram[x][y];
-                const norm = (globalMax !== globalMin)
-                ? (logVal - globalMin) / (globalMax - globalMin)
-                : 0.5;
-                flatData[y * width + x] = norm * 2 - 1;
+                flatData[y * width + x] = (logVal - mean) / (std + 1e-6);
             }
         }
         const inputTensor = new ort.Tensor("float32", flatData, [1, 1, height, width]);
@@ -138,7 +138,7 @@
 
         
         // Run ONNX
-        const session = await ort.InferenceSession.create("simple_cnn.onnx");
+        const session = await ort.InferenceSession.create("../../../models/onnx/simple_cnn.onnx");
         const feeds = { input: inputTensor };
         const results = await session.run(feeds);
         console.log("running onnx");
