@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Essentia.js Demo</title>
+</head>
+<body>
+  <h1>Essentia.js Test</h1>
+
+  <h1>Essentia.js - Upload a WAV File</h1>
+
+  <input type="file" id="fileInput" accept=".wav" />
+  <pre id="output">Please upload a .wav file...</pre>
+
+  <button onclick="runEssentia()">Run Essentia</button>
+  <pre id="output"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.0/dist/essentia-wasm.web.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.0/dist/essentia.js-extractor.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+
+  <script>
+    window.addEventListener("load", () => {
+      console.log("Page loaded");
+      console.log("EssentiaWASM:", typeof EssentiaWASM);
+      console.log("EssentiaExtractor:", typeof EssentiaExtractor);
+    });
+  </script>
+
+
+  <!-- Run script AFTER DOM is loaded -->
+  <script>
+    async function runEssentia() {
+        const out = document.getElementById("output");
+
+        const wasmModule = await EssentiaWASM();
+        const extractor = new EssentiaExtractor(wasmModule);
+
+        let AudioContext;
+        // global var for web audio API AudioContext
+        let audioCtx;
+        let bufferSize = 1024;
+        //let hopSize = 172;//512;
+        let hopSize = 172;
+        //let melNumBands = 128;//96;
+        let melNumBands = 96;
+        // sample rate of 48000
+        const sampleRate = 48000;
+        const durationSec = 2;
+    }
+
+    document.getElementById("fileInput").addEventListener("change", async function(event) {
+      const file = event.target.files[0];
+      const out = document.getElementById("output");
+
+      if (!file) {
+        out.innerText = "❌ No file selected.";
+        return;
+      }
+
+      out.innerText = "🔄 Loading and decoding WAV file...";
+
+      try {
+        //Decode WAV file
+        const arrayBuffer = await file.arrayBuffer();
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const signal = audioBuffer.getChannelData(0); // mono
+        const sampleRate = audioBuffer.sampleRate;
+
+        // Initialize Essentia
+        const wasmModule = await EssentiaWASM();
+        const extractor = new EssentiaExtractor(wasmModule);
+
+        // Parameters for framing
+        const frameSize = 1024;
+        const hopSize = 512;
+        const melSpectrogram = [];
+        const melBandsCount = 128//96
+        // Frame-by-frame mel spectrum extraction
+        for (let i = 0; i + frameSize <= signal.length; i += hopSize) {
+          const frame = signal.slice(i, i + frameSize);
+          const melBands = extractor.melSpectrumExtractor(frame, sampleRate);
+          melSpectrogram.push(melBands); // single channel
+        }
+        //Display melspectrogram result
+        let text = `Processed ${melSpectrogram.length} frames at ${sampleRate} Hz\n`;
+
+        for (let i = 0; i < Math.min(5, melSpectrogram.length); i++) {
+          const bands = melSpectrogram[i].slice(0, 5).map(x => x.toFixed(2)).join(", ");
+          text += `Frame ${i + 1}: ${bands}\n`;
+        }
+        
+        // Format into ONNX
+        const height = melBandsCount;
+        const width = 128;
+        console.log(melSpectrogram.length);
+        const paddedSpectrogram = [];
+        for (let i = 0; i < width; i++) {
+            if (i < melSpectrogram.length) {
+                paddedSpectrogram.push(melSpectrogram[i]);
+            } else {
+                paddedSpectrogram.push(new Array(height).fill(1e-10)); // pad with zeros
+            }
+        }
+        // flatten data and log normalize
+        const flatData = new Float32Array(1 * 1 * height * width);
+        let globalMin = Infinity;
+        let globalMax = -Infinity;
+
+        // Compute log-mel and track min/max
+        const logMelSpectrogram = [];
+        for (let x = 0; x < width; x++) {
+            const logFrame = [];
+            for (let y = 0; y < height; y++) {
+                let val = paddedSpectrogram[x][y];
+                if (!isFinite(val) || val <= 0) val = 1e-10;
+                const logVal = Math.log10(val);
+                logFrame.push(logVal);
+                if (logVal < globalMin) globalMin = logVal;
+                if (logVal > globalMax) globalMax = logVal;
+            }
+            logMelSpectrogram.push(logFrame);
+        }
+
+        // Normalize to [-1, 1]
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const logVal = logMelSpectrogram[x][y];
+                const norm = (globalMax !== globalMin)
+                ? (logVal - globalMin) / (globalMax - globalMin)
+                : 0.5;
+                flatData[y * width + x] = norm * 2 - 1;
+            }
+        }
+        const inputTensor = new ort.Tensor("float32", flatData, [1, 1, height, width]);
+        console.log(inputTensor);
+
+        
+        // Run ONNX
+        const session = await ort.InferenceSession.create("simple_cnn.onnx");
+        const feeds = { input: inputTensor };
+        const results = await session.run(feeds);
+        console.log("running onnx");
+        const outputTensor = results["output"];
+        const logits = outputTensor.data;
+        let maxLogit = -Infinity;
+        let predictedClass = -1;
+        console.log(logits);
+        for (let i = 0; i < logits.length; i++) {
+            if (logits[i] > maxLogit) {
+                maxLogit = logits[i];
+                predictedClass = i;
+            }
+        }
+
+        text += `
+        Output shape: [${outputTensor.dims.join(", ")}]
+        Raw logits: [${Array.from(logits).map(x => x.toFixed(3)).join(", ")}]
+        Predicted Class: ${predictedClass}
+        `;
+
+
+        out.innerText = text;
+      } catch (err) {
+        out.innerText = "❌ Error: " + err.message;
+        console.error(err);
+      }
+    });
+
+
+
+
+
+
+
+    /*
+    async function runEssentia() {
+        const out = document.getElementById("output");
+
+        try {
+            const wasmModule = await EssentiaWASM(); // use from window.EssentiaWASM
+            const extractor = new EssentiaExtractor(wasmModule);
+
+            const vec = new Float32Array([1, 2, 3, 4, 5]);
+            const mean = extractor.mean(vec); // lowercased for extractor API
+
+            out.innerText = `Mean: ${mean.mean.toFixed(2)}\n`;
+
+            const signal = new Float32Array(2048).map(() => Math.random() * 2 - 1);
+            const mel = extractor.melSpectrum(signal, 44100);
+
+            out.innerText += `Mel Spectrum (first frame, 5 bands): ${mel.melSpectrum[0].slice(0, 5).map(x => x.toFixed(2)).join(', ')}`;
+
+        } catch (err) {
+            out.innerText = "❌ Error: " + err.message;
+            console.error(err);
+        }
+    }*/
+
+  </script>
+</body>
+</html>
