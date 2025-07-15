@@ -142,6 +142,17 @@
         console.log("running onnx");
         const outputTensor = results["output"];
         const logits = outputTensor.data;
+
+        // Apply softmax to convert logits to probabilities
+        function softmax(logits) {
+          const maxLogit = Math.max(...logits); // For numerical stability
+          const exps = logits.map(x => Math.exp(x - maxLogit));
+          const sumExps = exps.reduce((a, b) => a + b, 0);
+          return exps.map(x => x / sumExps);
+        }
+
+        const probabilities = softmax(logits);
+
         let maxLogit = -Infinity;
         let predictedClass = -1;
         console.log(logits);
@@ -155,7 +166,8 @@
         text += `
         Output shape: [${outputTensor.dims.join(", ")}]
         Raw logits: [${Array.from(logits).map(x => x.toFixed(3)).join(", ")}]
-        Predicted Class: ${predictedClass}
+        Probabilities: [${probabilities.map(p => p.toFixed(3)).join(", ")}]
+        Predicted Class: ${predictedClass} (Confidence: ${(probabilities[predictedClass] * 100).toFixed(2)}%)
         `;
 
 
