@@ -136,7 +136,7 @@
 
         
         // Run ONNX
-        const session = await ort.InferenceSession.create("../../../models/onnx/simple_cnn.onnx");
+        const session = await ort.InferenceSession.create("../../models/onnx/simple_cnn.onnx");
         const feeds = { input: inputTensor };
         const results = await session.run(feeds);
         console.log("running onnx");
