@@ -9,15 +9,18 @@
 
   <h1>Essentia.js - Upload a WAV File</h1>
 
-  <input type="file" id="fileInput" accept=".wav" />
+  <input type="file" id="fileInput" accept=".wav" multiple />
   <pre id="output">Please upload a .wav file...</pre>
 
-  <button onclick="runEssentia()">Run Essentia</button>
   <pre id="output"></pre>
+
+  <div style='width: 600px; height: 600px;'><canvas id="polarChart"></canvas></div>
 
   <script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.0/dist/essentia-wasm.web.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/essentia.js@0.1.0/dist/essentia.js-extractor.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="chart.js"></script>
 
   <script>
     window.addEventListener("load", () => {
@@ -30,35 +33,16 @@
 
   <!-- Run script AFTER DOM is loaded -->
   <script>
-    async function runEssentia() {
-        const out = document.getElementById("output");
-
-        const wasmModule = await EssentiaWASM();
-        const extractor = new EssentiaExtractor(wasmModule);
-
-        let AudioContext;
-        // global var for web audio API AudioContext
-        let audioCtx;
-        let bufferSize = 1024;
-        //let hopSize = 172;//512;
-        let hopSize = 172;
-        //let melNumBands = 128;//96;
-        let melNumBands = 96;
-        // sample rate of 48000
-        const sampleRate = 48000;
-        const durationSec = 2;
-    }
-
     document.getElementById("fileInput").addEventListener("change", async function(event) {
       const file = event.target.files[0];
       const out = document.getElementById("output");
 
       if (!file) {
-        out.innerText = "❌ No file selected.";
+        out.innerText = "No file selected.";
         return;
       }
 
-      out.innerText = "🔄 Loading and decoding WAV file...";
+      out.innerText = "Processing wav file";
 
       try {
         //Decode WAV file
@@ -163,6 +147,19 @@
             }
         }
 
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        const ctxPolar = document.getElementById('polarChart').getContext('2d');
+        dummyData = [0.1, 0.2, 0.3, 0.8 , 0.7, 0.99]
+        if (window.pieChartInstance) {
+          window.pieChartInstance.destroy();
+        }
+
+        
+        makePolarChart(probabilities, ctxPolar);
+
+
+        console.log('chart rendered.');
+
         text += `
         Output shape: [${outputTensor.dims.join(", ")}]
         Raw logits: [${Array.from(logits).map(x => x.toFixed(3)).join(", ")}]
@@ -178,35 +175,6 @@
       }
     });
 
-
-
-
-
-
-
-    /*
-    async function runEssentia() {
-        const out = document.getElementById("output");
-
-        try {
-            const wasmModule = await EssentiaWASM(); // use from window.EssentiaWASM
-            const extractor = new EssentiaExtractor(wasmModule);
-
-            const vec = new Float32Array([1, 2, 3, 4, 5]);
-            const mean = extractor.mean(vec); // lowercased for extractor API
-
-            out.innerText = `Mean: ${mean.mean.toFixed(2)}\n`;
-
-            const signal = new Float32Array(2048).map(() => Math.random() * 2 - 1);
-            const mel = extractor.melSpectrum(signal, 44100);
-
-            out.innerText += `Mel Spectrum (first frame, 5 bands): ${mel.melSpectrum[0].slice(0, 5).map(x => x.toFixed(2)).join(', ')}`;
-
-        } catch (err) {
-            out.innerText = "❌ Error: " + err.message;
-            console.error(err);
-        }
-    }*/
 
   </script>
 </body>
