@@ -1,65 +1,3 @@
-function makeRadarChart(logitArray, ctx) {
-    if (window.pieChartInstance) {
-      window.pieChartInstance.destroy();
-    }
-  
-    window.pieChartInstance = new Chart(ctx, {
-      type: 'radar',
-      data: {
-        labels: [
-          'bad-attack-clarity',
-          'bad-dynamic-stability',
-          'bad-pitch-stability',
-          'bad-timbre-richness',
-          'bad-timbre-stability',
-          'good-sound'
-        ],
-        datasets: [{
-          label: 'Confidence Scores',
-          data: Array.from(logitArray),
-          backgroundColor: [
-            'rgba(54, 162, 235, 0.2)',
-            'rgba(0, 148, 255, 0.2)',
-            'rgba255, 148, 255, 0.2)',
-            'rgba(255, 148, 0, 0.2)',
-            'rgba(252, 80, 255, 0.2)',
-            'rgba(1, 185, 91, 0.2)'
-          ],
-          borderColor: 'rgba(54, 162, 235, 1)',
-          pointBackgroundColor: 'rgba(54, 162, 235, 1)',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { position: 'bottom' },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `${context.label}: ${context.parsed.toFixed(3)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          r: {
-            beginAtZero: true,
-            min: 0,
-            max: 1,
-            ticks: {
-              stepSize: 0.2
-            }
-          }
-        }
-      }
-    });
-
-
-  
-    console.log('radar chart rendered.');
-}
-
 function makePolarChart (logitArray, ctx) {
     if (window.polarChartInstance) {
         window.polarChartInstance.destroy();
@@ -181,6 +119,3 @@ function makePolarChart (logitArray, ctx) {
     });
      
 }
-
-
-  
