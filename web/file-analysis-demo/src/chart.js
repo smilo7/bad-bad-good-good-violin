@@ -96,7 +96,7 @@ export function makePolarChart (logitArray, ctx) {
                 tooltip: {
                   callbacks: {
                     label: function(context) {
-                      return `${context.label}: ${context.parsed.toFixed(3)}`;
+                      return `${context.label}: ${Number(context.parsed).toFixed(3)}`;
                     }
                   }
                 }
