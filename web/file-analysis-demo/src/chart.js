@@ -1,4 +1,4 @@
-function makePolarChart (logitArray, ctx) {
+export function makePolarChart (logitArray, ctx) {
     if (window.polarChartInstance) {
         window.polarChartInstance.destroy();
     }
