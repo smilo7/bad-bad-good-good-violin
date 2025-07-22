@@ -35,7 +35,7 @@ export function prepareOnnxInput(melSpectrogram, melBandsCount = 128, width = 12
 
 export async function runOnnx(flatData, melBandsCount = 128, width = 128) {
   const inputTensor = new ort.Tensor("float32", flatData, [1, 1, melBandsCount, width]);
-  const session = await ort.InferenceSession.create("../../models/onnx/simple_cnn.onnx");
+  const session = await ort.InferenceSession.create("models/onnx/simple_cnn.onnx");
   const feeds = { input: inputTensor };
   const results = await session.run(feeds);
   return results["output"].data;
