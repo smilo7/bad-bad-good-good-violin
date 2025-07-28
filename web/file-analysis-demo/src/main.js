@@ -1,6 +1,7 @@
 import { decodeAndResampleWavFile, chunkWaveform} from './audio.js';
 import { softmax, runOnnxCombinedClassifier } from './onnx.js';
-import { makePolarChart } from './chart.js';
+import { makePolarChart, makeLineChart, labelColors } from './chart.js';
+import { makeWaveform } from './waveform.js';
 import { MicRecorder } from './mic.js';
 
 
@@ -73,18 +74,23 @@ window.addEventListener("DOMContentLoaded", () => {
 
       // After predictions are computed
       let text = `✅ Predictions for ${predictions.length} chunks:\n`;
+      let maxIdx = 0;
       predictions.forEach((probs, i) => {
-        const maxIdx = probs.indexOf(Math.max(...probs));
+        maxIdx = probs.indexOf(Math.max(...probs));
         const confidence = (probs[maxIdx] * 100).toFixed(1);
         text += `Chunk ${i + 1}: Class ${maxIdx} (Confidence: ${confidence}%)\n`;
         // Optionally, show all probabilities:
         // text += `  Probabilities: [${probs.map(p => p.toFixed(2)).join(", ")}]\n`;
       });
       output.innerText = text;
+      
+      let predictedLabelColor = labelColors[maxIdx];
+      makeWaveform(selectedFile, predictedLabelColor);
 
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
+      const ctxLine = document.getElementById('lineChart').getContext('2d');
       makePolarChart(predictions[0], ctxPolar); //just show the first chunk's probabilities for now
-
+      makeLineChart(predictions, ctxLine)
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
       console.error(err);
