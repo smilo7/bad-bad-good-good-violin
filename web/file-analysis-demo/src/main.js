@@ -1,5 +1,5 @@
-import { decodeWavFile, extractMelSpectrogram } from './audio.js';
-import { prepareOnnxInput, runOnnx, softmax } from './onnx.js';
+import { decodeWavFile} from './audio.js';
+import { softmax, runOnnxCombinedClassifier } from './onnx.js';
 import { makePolarChart } from './chart.js';
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -21,14 +21,9 @@ window.addEventListener("DOMContentLoaded", () => {
     output.innerText = "🔄 Loading and decoding WAV file...";
     try {
       const { signal, sampleRate } = await decodeWavFile(selectedFile);
-      const melSpectrogram = await extractMelSpectrogram(signal, sampleRate);
-      let text = `Processed ${melSpectrogram.length} frames at ${sampleRate} Hz\n`;
-      for (let i = 0; i < Math.min(5, melSpectrogram.length); i++) {
-        const bands = melSpectrogram[i].slice(0, 5).map(x => x.toFixed(2)).join(", ");
-        text += `Frame ${i + 1}: ${bands}\n`;
-      }
-      const flatData = prepareOnnxInput(melSpectrogram);
-      const logits = await runOnnx(flatData);
+
+      const logits = await runOnnxCombinedClassifier(signal)
+
       const probabilities = softmax(logits);
 
       let maxLogit = -Infinity;
@@ -43,7 +38,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       makePolarChart(probabilities, ctxPolar);
 
-      text += `
+      let text = `
 Output shape: [${logits.length}]
 Raw logits: [${Array.from(logits).map(x => x.toFixed(3)).join(", ")}]
 Probabilities: [${probabilities.map(p => p.toFixed(3)).join(", ")}]

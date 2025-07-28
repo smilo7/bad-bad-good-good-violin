@@ -47,3 +47,23 @@ export function softmax(logits) {
   const sumExps = exps.reduce((a, b) => a + b, 0);
   return exps.map(x => x / sumExps);
 }
+
+export async function runOnnxMelSpectrogramModel(waveformArray) {
+    const session = await ort.InferenceSession.create('models/onnx/mel_spectrogram_model.onnx');
+    const input = new ort.Tensor('float32', waveformArray, [1, waveformArray.length]);
+
+    const feeds = { waveform: input };
+    const results = await session.run(feeds);
+    const melSpec = results.mel_spec.data;
+    return melSpec;
+}
+
+export async function runOnnxCombinedClassifier(waveformArray) {
+  const session = await ort.InferenceSession.create('models/onnx/audio_to_class.onnx');
+  const input = new ort.Tensor('float32', waveformArray, [1, waveformArray.length]);
+
+  const feeds = { waveform: input };
+  const results = await session.run(feeds);
+  const scores = results.class_scores.data;  // [logit_0, logit_1, ..., logit_n]
+  return scores;
+}
