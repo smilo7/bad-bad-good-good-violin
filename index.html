@@ -7,9 +7,24 @@
 <body>
   <h1>Violin Quality Classifier</h1>
 
+  <!-- Instructions Box -->
+  <div style="background:#f0f4ff; border:1px solid #b3c6ff; padding:1em; margin-bottom:1em; max-width:600px;">
+    <strong>Instructions:</strong>
+    <ul style="margin-top:0.5em;">
+      <li>Upload a <b>.wav</b> file using the file input, <i>or</i> record audio using the <b>Record</b> button.</li>
+      <li>Click <b>Run Analysis</b> to classify the audio.</li>
+      <li><b>Results</b> and details will appear below after analysis.</li>
+    </ul>
+  </div>
+
   <!-- File Input -->
   <input type="file" id="fileInput" accept=".wav" />
-  <button id="runBtn">Run Essentia</button>
+  
+  <button id="recordBtn">🎤 Record</button>
+  <button id="stopBtn" disabled>⏹️ Stop</button>
+  <audio id="audioPlayer" controls style="width:100%;"></audio>
+
+  <button id="runBtn">Run Analysis</button>
   <pre id="output">Please upload a .wav file...</pre>
   <div style='width: 600px; height: 600px;'><canvas id="polarChart"></canvas></div>
 
