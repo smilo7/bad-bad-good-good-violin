@@ -35,7 +35,7 @@ def export_combined_model_to_onnx(model_path, onnx_path, input_length=24000, num
     model.eval()
 
     # 3. Create dummy input: batch of raw audio
-    dummy_input = torch.randn(1, input_length)
+    dummy_input = torch.randn(2, input_length)
 
     # 4. Export
     torch.onnx.export(
@@ -44,9 +44,13 @@ def export_combined_model_to_onnx(model_path, onnx_path, input_length=24000, num
         onnx_path,
         input_names=["waveform"],
         output_names=["class_scores"],
-        dynamic_axes={"waveform": {1: "num_samples"}},  # optional, allows variable-length audio
+        dynamic_axes={
+            "waveform": {0: "batch_size", 1: "num_samples"},
+            "class_scores": {0: "batch_size"}
+        },
         opset_version=16
     )
+
 
     print(f"✅ Combined model exported to: {onnx_path}")
 

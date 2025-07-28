@@ -58,7 +58,8 @@ export async function runOnnxMelSpectrogramModel(waveformArray) {
     return melSpec;
 }
 
-export async function runOnnxCombinedClassifier(waveformArray) {
+// This function runs the ONNX model for audio classification on a single waveform array.
+export async function runOnnxCombinedClassifierSingle(waveformArray) {
   const session = await ort.InferenceSession.create('models/onnx/audio_to_class.onnx');
   const input = new ort.Tensor('float32', waveformArray, [1, waveformArray.length]);
 
@@ -66,4 +67,38 @@ export async function runOnnxCombinedClassifier(waveformArray) {
   const results = await session.run(feeds);
   const scores = results.class_scores.data;  // [logit_0, logit_1, ..., logit_n]
   return scores;
+}
+
+let sessionPromise = null;
+
+export async function runOnnxCombinedClassifier(chunksArray, batchSize = 32, onBatch = null) {
+  if (!sessionPromise) {
+    sessionPromise = ort.InferenceSession.create('models/onnx/audio_to_class.onnx');
+  }
+  const session = await sessionPromise;
+
+  const chunkLength = chunksArray[0].length;
+  const totalChunks = chunksArray.length;
+  const totalBatches = Math.ceil(totalChunks / batchSize);
+
+  const allLogits = [];
+
+  for (let i = 0; i < totalChunks; i += batchSize) {
+    const batchChunks = chunksArray.slice(i, i + batchSize);
+    const currentBatchSize = batchChunks.length;
+
+    const inputData = new Float32Array(currentBatchSize * chunkLength);
+    batchChunks.forEach((chunk, j) => inputData.set(chunk, j * chunkLength));
+
+    const inputTensor = new ort.Tensor('float32', inputData, [currentBatchSize, chunkLength]);
+    const feeds = { waveform: inputTensor };
+
+    const results = await session.run(feeds);
+    const logits = results.class_scores.data;
+    allLogits.push(...logits);
+
+    if (onBatch) await onBatch(Math.floor(i / batchSize), totalBatches);
+  }
+
+  return allLogits;
 }
