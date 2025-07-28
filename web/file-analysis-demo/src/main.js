@@ -1,28 +1,55 @@
 import { decodeAndResampleWavFile, chunkWaveform} from './audio.js';
 import { softmax, runOnnxCombinedClassifier } from './onnx.js';
 import { makePolarChart } from './chart.js';
+import { MicRecorder } from './mic.js';
+
 
 window.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fileInput");
   const output = document.getElementById("output");
   const runBtn = document.getElementById("runBtn");
+  const recordBtn = document.getElementById("recordBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const audioPlayer = document.getElementById("audioPlayer");
   let selectedFile = null;
+
+  const mic = new MicRecorder(audioPlayer, output);
+
+  recordBtn.addEventListener("click", async () => {
+    recordBtn.disabled = true;
+    stopBtn.disabled = false;
+    await mic.start();
+  });
+
+  stopBtn.addEventListener("click", () => {
+    mic.stop();
+    recordBtn.disabled = false;
+    stopBtn.disabled = true;
+  });
 
   fileInput.addEventListener("change", (event) => {
     selectedFile = event.target.files[0];
-    output.innerText = selectedFile ? "File loaded. Click 'Run Essentia'." : "❌ No file selected.";
+    mic.clear(); // Clear mic recording if new file is chosen
+    output.innerText = selectedFile ? "File loaded. Click 'Run Analysis'." : "❌ No file selected.";
+    audioPlayer.src = selectedFile ? URL.createObjectURL(selectedFile) : "";
   });
 
   runBtn.addEventListener("click", async () => {
-    if (!selectedFile) {
-      output.innerText = "❌ Please select a .wav file first.";
+
+    let audioSource = null;
+    if (mic.getBlob()) {
+      audioSource = mic.getBlob();
+      output.innerText = "🔄 Decoding mic recording...";
+    } else if (selectedFile) {
+      audioSource = selectedFile;
+      output.innerText = "🔄 Loading and decoding WAV file...";
+    } else {
+      output.innerText = "❌ Please select a .wav file or record audio first.";
       return;
     }
-    output.innerText = "🔄 Loading and decoding WAV file...";
-    try {
-      // const { signal, sampleRate } = await decodeWavFile(selectedFile);
 
-      const signal = await decodeAndResampleWavFile(selectedFile);
+    try {
+      const signal = await decodeAndResampleWavFile(audioSource);
       
       const chunks = chunkWaveform(signal);
 
@@ -58,13 +85,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       makePolarChart(predictions[0], ctxPolar); //just show the first chunk's probabilities for now
 
-//       let text = `
-// Output shape: [${logits.length}]
-// Raw logits: [${Array.from(logits).map(x => x.toFixed(3)).join(", ")}]
-// Probabilities: [${probabilities.map(p => p.toFixed(3)).join(", ")}]
-// Predicted Class: ${predictedClass} (Confidence: ${(probabilities[predictedClass] * 100).toFixed(2)}%)
-//       `;
-//       output.innerText = text;
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
       console.error(err);
