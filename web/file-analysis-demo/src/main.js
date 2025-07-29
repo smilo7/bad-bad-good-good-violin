@@ -1,6 +1,6 @@
 import { decodeAndResampleWavFile, chunkWaveform, HOP_DURATION} from './audio.js';
 import { softmax, runOnnxCombinedClassifier } from './onnx.js';
-import { makePolarChart, makeLineChart, labelColors } from './chart.js';
+import { makePolarChart, makeLineChart, labelColors, getAverageProbabilities } from './chart.js';
 import { makeWaveform, showPredictionsOnWaveform } from './waveform.js';
 import { MicRecorder } from './mic.js';
 
@@ -34,7 +34,7 @@ window.addEventListener("DOMContentLoaded", () => {
           // Update the chart only if the chunk is valid and has changed
           if (chunkIndex >= 0 && chunkIndex < predictions.length && chunkIndex !== lastUpdatedChunkIndex) {
               const predictionForChunk = predictions[chunkIndex];
-              makePolarChart(predictionForChunk, ctxPolar);
+              makePolarChart(predictionForChunk, ctxPolar, "Live Classification");
               lastUpdatedChunkIndex = chunkIndex;
           }
       };
@@ -139,7 +139,8 @@ window.addEventListener("DOMContentLoaded", () => {
       const ctxLine = document.getElementById('lineChart').getContext('2d');
       
       // The polar chart now defaults to the first chunk's data on load
-      makePolarChart(predictions[0], ctxPolar);
+      let averagedProbabilites = getAverageProbabilities(predictions);
+      makePolarChart(averagedProbabilites, ctxPolar, "Overall Classfication");
       makeLineChart(predictions, timestamps, ctxLine);
       showPredictionsOnWaveform(predictions, HOP_DURATION, labelColors);
 

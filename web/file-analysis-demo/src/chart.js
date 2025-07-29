@@ -1,4 +1,4 @@
-export function makePolarChart (logitArray, ctx) {
+export function makePolarChart (logitArray, ctx, chartTitle) {
     if (window.polarChartInstance) {
         window.polarChartInstance.destroy();
     }
@@ -57,20 +57,12 @@ export function makePolarChart (logitArray, ctx) {
                     'rgba(75, 192, 192, 0.2)'
                   ],
                 borderColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                  ],
-                pointBackgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)',
-                    'rgba(75, 192, 192, 0.2)'
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)',
+                    'rgba(75, 192, 192, 1)',
                   ],
                 borderWidth: 2
             }]
@@ -86,6 +78,14 @@ export function makePolarChart (logitArray, ctx) {
                 }
             },
             plugins: {
+                title: {
+                  display: true,
+                  text: chartTitle,
+                  font: {
+                    size: 20,
+                    weight: 'bold'
+                  }
+                },
                 legend: {
                   position: 'bottom'
                 },
@@ -160,6 +160,21 @@ export function makeLineChart(probabilities, timestamps, ctx) {
       }
     }
   });
+}
+
+export function getAverageProbabilities(predictions) {
+  if (!predictions || predictions.length === 0) return [];
+
+  const numClasses = predictions[0].length;
+  const avgProbs = new Array(numClasses).fill(0);
+
+  predictions.forEach(probs => {
+    probs.forEach((p, i) => {
+      avgProbs[i] += p;
+    });
+  });
+
+  return avgProbs.map(p => p / predictions.length);
 }
 
 export const labelColors = [
