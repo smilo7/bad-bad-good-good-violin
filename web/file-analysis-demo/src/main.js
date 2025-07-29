@@ -7,6 +7,7 @@ import { MicRecorder } from './mic.js';
 
 window.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fileInput");
+  fileInput.value = ''; // Clear any previous file selected
   const output = document.getElementById("output");
   const runBtn = document.getElementById("runBtn");
   const recordBtn = document.getElementById("recordBtn");

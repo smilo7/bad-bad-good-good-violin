@@ -1,0 +1,35 @@
+.results-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 1em;
+  max-width: 1200px;
+  margin-top: 2em;
+}
+
+.waveform-container {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 0.5em;
+  min-height: 128px;
+}
+
+#waveform {
+  width: 100%;
+  height: 100%;
+}
+
+#wave-timeline {
+  width: 100%;
+  margin-top: 0.2em;
+}
+
+.chart-box {
+  width: 100%;
+  height: 600px;
+}
+
+#polarChart {
+  width: 100%;
+  height: 100%;
+}

@@ -153,6 +153,9 @@ export function makeLineChart(probabilities, timestamps, ctx) {
         }
       },
       plugins : {
+        legend: {
+                  position: 'bottom'
+                },
         title: {
           display : true,
           text: 'Prediction Confidence Over Time'
