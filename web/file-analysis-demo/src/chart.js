@@ -123,15 +123,14 @@ export function makePolarChart (logitArray, ctx) {
 export function makeLineChart(probabilities, ctx) {
   const numClasses = probabilities[0].length;
 
-  const labels = probabilities[0].map((_, i) => i);
-  
+  const labels = probabilities.map((_, i) => i + 1);
+
   const datasets = Array.from({length: numClasses}, (_, classIndex) => ({
     label: classLabels[classIndex],
     data: probabilities.map(row => row[classIndex]),
     borderColor : labelColors[classIndex % labelColors.length],
     backgroundColor: labelColors[classIndex % labelColors.length]
-  }))
-
+  }));
 
   if (window.lineChartInstance) {
     window.lineChartInstance.destroy();
@@ -152,8 +151,7 @@ export function makeLineChart(probabilities, ctx) {
         }
       }
     }
-  })
-
+  });
 }
 
 export const labelColors = [
