@@ -1,7 +1,7 @@
-import { decodeAndResampleWavFile, chunkWaveform} from './audio.js';
+import { decodeAndResampleWavFile, chunkWaveform, HOP_DURATION} from './audio.js';
 import { softmax, runOnnxCombinedClassifier } from './onnx.js';
 import { makePolarChart, makeLineChart, labelColors } from './chart.js';
-import { makeWaveform } from './waveform.js';
+import { makeWaveform, showPredictionsOnWaveform } from './waveform.js';
 import { MicRecorder } from './mic.js';
 
 
@@ -20,24 +20,18 @@ window.addEventListener("DOMContentLoaded", () => {
   // --- Button Event Listeners ---
 
   playBtn.addEventListener('click', () => {
-    if (window.wavesurfer) {
-      window.wavesurfer.play();
-    }
+    if (window.wavesurfer) window.wavesurfer.play();
   });
 
   pauseBtn.addEventListener('click', () => {
-    if (window.wavesurfer) {
-      window.wavesurfer.pause();
-    }
+    if (window.wavesurfer) window.wavesurfer.pause();
   });
   
   recordBtn.addEventListener("click", async () => {
     // Clear any previous file selection or waveform
     selectedFile = null;
     fileInput.value = '';
-    if (window.wavesurfer) {
-      window.wavesurfer.destroy();
-    }
+    if (window.wavesurfer) window.wavesurfer.destroy();
     mic.clear();
 
     recordBtn.disabled = true;
@@ -90,29 +84,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const numClasses = logitsArray.length / chunks.length;
       const predictions = [];
-
       for (let i = 0; i < chunks.length; i++) {
         const logits = logitsArray.slice(i * numClasses, (i + 1) * numClasses);
         const probs = softmax(logits);
         predictions.push(probs);
       }
 
-      let text = `✅ Predictions for ${predictions.length} chunks:\n`;
-      let maxIdx = 0;
-      predictions.forEach((probs, i) => {
-        maxIdx = probs.indexOf(Math.max(...probs));
-        const confidence = (probs[maxIdx] * 100).toFixed(1);
-        text += `Chunk ${i + 1}: Class ${maxIdx} (Confidence: ${confidence}%)\n`;
-      });
+      let text = `✅ Analysis complete for ${predictions.length} audio segments.\n`;
+      text += "See results on the waveform and charts below.";
       output.innerText = text;
       
-      let predictedLabelColor = labelColors[maxIdx];
-      makeWaveform(audioSource, predictedLabelColor);
-
+      // --- Create timestamps and update visuals ---
+      const timestamps = predictions.map((_, i) => (i * HOP_DURATION).toFixed(2));
+      
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       const ctxLine = document.getElementById('lineChart').getContext('2d');
-      makePolarChart(predictions[0], ctxPolar); 
-      makeLineChart(predictions, ctxLine)
+      
+      makePolarChart(predictions[0], ctxPolar);
+      makeLineChart(predictions, timestamps, ctxLine);
+      showPredictionsOnWaveform(predictions, HOP_DURATION, labelColors);
+
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
       console.error(err);

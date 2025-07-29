@@ -1,4 +1,6 @@
 import WaveSurfer from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/wavesurfer.esm.js'
+import TimelinePlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/timeline.esm.js'
+import RegionsPlugin from 'https://cdn.jsdelivr.net/npm/wavesurfer.js@7/dist/plugins/regions.esm.js'
 
 export function makeWaveform(wavFile, waveColor = '#383351') {
     if (window.wavesurfer) {
@@ -13,6 +15,9 @@ export function makeWaveform(wavFile, waveColor = '#383351') {
     playBtn.disabled = true;
     pauseBtn.style.display = 'none';
 
+    // Create an instance of the Regions plugin
+    const regions = RegionsPlugin.create();
+
     window.wavesurfer = WaveSurfer.create({
         container: '#waveform',
         waveColor: 	waveColor,
@@ -21,15 +26,18 @@ export function makeWaveform(wavFile, waveColor = '#383351') {
         height: 128,
         barWidth: 2,
         barGap: 1,
-        barRadius: 2
-      });
-      
-    // When the waveform is ready, enable the play button
-    window.wavesurfer.on('ready', () => {
-        playBtn.disabled = false;
+        barRadius: 2,
+        plugins: [
+            TimelinePlugin.create({
+                container: '#wave-timeline'
+            }),
+            regions
+        ]
     });
-
-    // When playback starts, show the pause button
+    // Store regions instance for later access
+    window.wavesurfer.regions = regions;
+      
+    window.wavesurfer.on('ready', () => { playBtn.disabled = false; });
     window.wavesurfer.on('play', () => {
         playBtn.style.display = 'none';
         pauseBtn.style.display = 'inline-block';
@@ -47,9 +55,28 @@ export function makeWaveform(wavFile, waveColor = '#383351') {
         pauseBtn.style.display = 'none';
         window.wavesurfer.seekTo(0);
     });
-    
-    // Clicking on the waveform will also play it
-    window.wavesurfer.on('interaction', () => {
-        window.wavesurfer.play();
+    window.wavesurfer.on('interaction', () => { window.wavesurfer.play(); });
+}
+
+export function showPredictionsOnWaveform(predictions, hopDuration, classColors) {
+    if (!window.wavesurfer || !window.wavesurfer.regions) return;
+
+    const regionsPlugin = window.wavesurfer.regions;
+    regionsPlugin.clearRegions();
+
+    predictions.forEach((probs, i) => {
+        const maxIdx = probs.indexOf(Math.max(...probs));
+        const color = classColors[maxIdx]; // e.g., 'rgba(255, 99, 132, 1)'
+        
+        // Create a semi-transparent version of the color for the region fill
+        const regionColor = color.replace(', 1)', ', 0.3)');
+
+        regionsPlugin.addRegion({
+            start: i * hopDuration,
+            end: (i * hopDuration) + hopDuration,
+            color: regionColor,
+            drag: false,
+            resize: false,
+        });
     });
 }
