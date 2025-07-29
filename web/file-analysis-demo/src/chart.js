@@ -108,7 +108,7 @@ export function makePolarChart (logitArray, ctx) {
                 }
             },
             animation: {
-                animateRotate: true
+                duration: 0 
             },
         },
         plugins: [polarLabelPlugin]

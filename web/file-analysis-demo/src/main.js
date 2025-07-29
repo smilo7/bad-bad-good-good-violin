@@ -17,8 +17,46 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const mic = new MicRecorder(output);
 
-  // --- Button Event Listeners ---
+  /**
+   * Links waveform playback position to the polar chart, updating it dynamically.
+   * @param {Array<Array<number>>} predictions - The array of prediction probabilities.
+   * @param {number} hopDuration - The time duration between the start of each chunk.
+   */
+  function setupPlaybackAnalysis(predictions, hopDuration) {
+      if (!window.wavesurfer) return;
 
+      const ctxPolar = document.getElementById('polarChart').getContext('2d');
+      let lastUpdatedChunkIndex = -1;
+
+      const updateChartForTime = (time) => {
+          const chunkIndex = Math.floor(time / hopDuration);
+
+          // Update the chart only if the chunk is valid and has changed
+          if (chunkIndex >= 0 && chunkIndex < predictions.length && chunkIndex !== lastUpdatedChunkIndex) {
+              const predictionForChunk = predictions[chunkIndex];
+              makePolarChart(predictionForChunk, ctxPolar);
+              lastUpdatedChunkIndex = chunkIndex;
+          }
+      };
+
+      // When a new waveform is loaded, WaveSurfer's .destroy() method is called,
+      // which automatically removes all event listeners, preventing duplicates.
+      
+      // Fired continuously during playback
+      window.wavesurfer.on('audioprocess', (currentTime) => {
+          updateChartForTime(currentTime);
+      });
+
+      // Fired when the user seeks to a new position
+      window.wavesurfer.on('seek', (progress) => {
+          const newTime = progress * window.wavesurfer.getDuration();
+          updateChartForTime(newTime);
+          // When seeking while paused, audioprocess doesn't fire, so we need this.
+      });
+  }
+
+
+  // --- Event Listeners ---
   playBtn.addEventListener('click', () => {
     if (window.wavesurfer) window.wavesurfer.play();
   });
@@ -100,9 +138,13 @@ window.addEventListener("DOMContentLoaded", () => {
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       const ctxLine = document.getElementById('lineChart').getContext('2d');
       
+      // The polar chart now defaults to the first chunk's data on load
       makePolarChart(predictions[0], ctxPolar);
       makeLineChart(predictions, timestamps, ctxLine);
       showPredictionsOnWaveform(predictions, HOP_DURATION, labelColors);
+
+      // Set up the dynamic updates for playback
+      setupPlaybackAnalysis(predictions, HOP_DURATION);
 
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
