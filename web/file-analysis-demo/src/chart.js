@@ -34,10 +34,6 @@ export function makePolarChart (logitArray, ctx) {
         }
     };
       
-      
-      
-      
-      
     window.polarChartInstance = new Chart(ctx, {
         type: 'polarArea',
         data: {
@@ -112,18 +108,16 @@ export function makePolarChart (logitArray, ctx) {
                 }
             },
             animation: {
-                animateRotate: true
+                duration: 0 
             },
         },
         plugins: [polarLabelPlugin]
     });
-     
 }
 
-export function makeLineChart(probabilities, ctx) {
+export function makeLineChart(probabilities, timestamps, ctx) {
   const numClasses = probabilities[0].length;
-
-  const labels = probabilities.map((_, i) => i + 1);
+  const labels = timestamps;
 
   const datasets = Array.from({length: numClasses}, (_, classIndex) => ({
     label: classLabels[classIndex],
@@ -144,10 +138,24 @@ export function makeLineChart(probabilities, ctx) {
     },
     options: {
       responsive : true,
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Time (seconds)'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Confidence'
+          }
+        }
+      },
       plugins : {
         title: {
           display : true,
-          text : 'Line Chart'
+          text: 'Prediction Confidence Over Time'
         }
       }
     }

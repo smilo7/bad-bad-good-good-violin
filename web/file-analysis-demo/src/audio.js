@@ -1,3 +1,7 @@
+export const CHUNK_DURATION = 0.5;
+export const HOP_DURATION = 0.25;
+
+
 export async function decodeAndResampleWavFile(file, targetSampleRate = 48000) {
   const arrayBuffer = await file.arrayBuffer();
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -18,7 +22,7 @@ export async function decodeAndResampleWavFile(file, targetSampleRate = 48000) {
   return rendered.getChannelData(0); // mono
 }
 
-export function chunkWaveform(signal, sampleRate = 48000, chunkDuration = 0.5, hopDuration = 0.25) {
+export function chunkWaveform(signal, sampleRate = 48000, chunkDuration = CHUNK_DURATION, hopDuration = HOP_DURATION) {
   const chunkSize = Math.floor(chunkDuration * sampleRate); // e.g., 24000
   const hopSize = Math.floor(hopDuration * sampleRate);     // e.g., 4800 for 0.1s hopDuration
 
