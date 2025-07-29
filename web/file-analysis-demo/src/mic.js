@@ -1,6 +1,5 @@
 export class MicRecorder {
-  constructor(audioPlayer, output) {
-    this.audioPlayer = audioPlayer;
+  constructor(output) {
     this.output = output;
     this.mediaRecorder = null;
     this.audioChunks = [];
@@ -18,20 +17,23 @@ export class MicRecorder {
       if (e.data.size > 0) this.audioChunks.push(e.data);
     };
 
-    this.mediaRecorder.onstop = () => {
-      this.recordedBlob = new Blob(this.audioChunks, { type: "audio/wav" });
-      this.audioPlayer.src = URL.createObjectURL(this.recordedBlob);
-      this.output.innerText = "Recording complete. Click 'Run Essentia' to analyze.";
-    };
-
     this.mediaRecorder.start();
   }
 
   stop() {
-    if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
-      this.mediaRecorder.stop();
-      this.output.innerText = "⏹️ Stopped recording.";
-    }
+    return new Promise((resolve) => {
+      if (this.mediaRecorder && this.mediaRecorder.state === "recording") {
+        this.mediaRecorder.onstop = () => {
+          this.recordedBlob = new Blob(this.audioChunks, { type: "audio/wav" });
+          this.output.innerText = "Recording complete. Click 'Run Analysis' to analyze.";
+          resolve(this.recordedBlob);
+        };
+        this.mediaRecorder.stop();
+        this.output.innerText = "⏹️ Stopped recording.";
+      } else {
+        resolve(null);
+      }
+    });
   }
 
   getBlob() {

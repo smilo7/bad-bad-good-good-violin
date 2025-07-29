@@ -11,19 +11,46 @@ window.addEventListener("DOMContentLoaded", () => {
   const runBtn = document.getElementById("runBtn");
   const recordBtn = document.getElementById("recordBtn");
   const stopBtn = document.getElementById("stopBtn");
-  const audioPlayer = document.getElementById("audioPlayer");
+  const playBtn = document.getElementById("playBtn");
+  const pauseBtn = document.getElementById("pauseBtn");
   let selectedFile = null;
 
-  const mic = new MicRecorder(audioPlayer, output);
+  const mic = new MicRecorder(output);
 
+  // --- Button Event Listeners ---
+
+  playBtn.addEventListener('click', () => {
+    if (window.wavesurfer) {
+      window.wavesurfer.play();
+    }
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    if (window.wavesurfer) {
+      window.wavesurfer.pause();
+    }
+  });
+  
   recordBtn.addEventListener("click", async () => {
+    // Clear any previous file selection or waveform
+    selectedFile = null;
+    fileInput.value = '';
+    if (window.wavesurfer) {
+      window.wavesurfer.destroy();
+    }
+    mic.clear();
+
     recordBtn.disabled = true;
     stopBtn.disabled = false;
     await mic.start();
   });
 
-  stopBtn.addEventListener("click", () => {
-    mic.stop();
+  stopBtn.addEventListener("click", async () => {
+    const recordedBlob = await mic.stop();
+    if (recordedBlob) {
+      selectedFile = recordedBlob;
+      makeWaveform(selectedFile); // Create waveform immediately
+    }
     recordBtn.disabled = false;
     stopBtn.disabled = true;
   });
@@ -31,25 +58,24 @@ window.addEventListener("DOMContentLoaded", () => {
   fileInput.addEventListener("change", (event) => {
     selectedFile = event.target.files[0];
     mic.clear(); // Clear mic recording if new file is chosen
-    output.innerText = selectedFile ? "File loaded. Click 'Run Analysis'." : "❌ No file selected.";
-    audioPlayer.src = selectedFile ? URL.createObjectURL(selectedFile) : "";
+    if (selectedFile) {
+        output.innerText = "File loaded. Click 'Run Analysis'.";
+        makeWaveform(selectedFile); // Create waveform immediately
+    } else {
+        output.innerText = "❌ No file selected.";
+    }
   });
 
   runBtn.addEventListener("click", async () => {
-
-    let audioSource = null;
-    if (mic.getBlob()) {
-      audioSource = mic.getBlob();
-      output.innerText = "🔄 Decoding mic recording...";
-    } else if (selectedFile) {
-      audioSource = selectedFile;
-      output.innerText = "🔄 Loading and decoding WAV file...";
-    } else {
+    if (!selectedFile) {
       output.innerText = "❌ Please select a .wav file or record audio first.";
       return;
     }
 
+    const audioSource = selectedFile; // This is our definitive audio source (File or Blob)
+
     try {
+      output.innerText = "🔄 Loading and decoding audio file...";
       const signal = await decodeAndResampleWavFile(audioSource);
       
       const chunks = chunkWaveform(signal);
@@ -62,7 +88,6 @@ window.addEventListener("DOMContentLoaded", () => {
         await new Promise(r => setTimeout(r, 0)); // Let the browser update the UI
       });
 
-      // Each row in logitsArray corresponds to one chunk's logits
       const numClasses = logitsArray.length / chunks.length;
       const predictions = [];
 
@@ -72,24 +97,21 @@ window.addEventListener("DOMContentLoaded", () => {
         predictions.push(probs);
       }
 
-      // After predictions are computed
       let text = `✅ Predictions for ${predictions.length} chunks:\n`;
       let maxIdx = 0;
       predictions.forEach((probs, i) => {
         maxIdx = probs.indexOf(Math.max(...probs));
         const confidence = (probs[maxIdx] * 100).toFixed(1);
         text += `Chunk ${i + 1}: Class ${maxIdx} (Confidence: ${confidence}%)\n`;
-        // Optionally, show all probabilities:
-        // text += `  Probabilities: [${probs.map(p => p.toFixed(2)).join(", ")}]\n`;
       });
       output.innerText = text;
       
       let predictedLabelColor = labelColors[maxIdx];
-      makeWaveform(selectedFile, predictedLabelColor);
+      makeWaveform(audioSource, predictedLabelColor);
 
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       const ctxLine = document.getElementById('lineChart').getContext('2d');
-      makePolarChart(predictions[0], ctxPolar); //just show the first chunk's probabilities for now
+      makePolarChart(predictions[0], ctxPolar); 
       makeLineChart(predictions, ctxLine)
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
