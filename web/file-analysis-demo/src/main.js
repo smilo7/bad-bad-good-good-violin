@@ -3,6 +3,7 @@ import { softmax, runOnnxCombinedClassifier } from './onnx.js';
 import { makePolarChart, makeLineChart, labelColors } from './chart.js';
 import { makeWaveform, showPredictionsOnWaveform } from './waveform.js';
 import { MicRecorder } from './mic.js';
+import { renderLegend } from './chart.js';
 
 
 window.addEventListener("DOMContentLoaded", () => {
@@ -132,6 +133,9 @@ window.addEventListener("DOMContentLoaded", () => {
       let text = `✅ Analysis complete for ${predictions.length} audio segments.\n`;
       text += "See results on the waveform and charts below.";
       output.innerText = text;
+
+      // --- Render Legend ---
+      renderLegend('chartLegend');
       
       // --- Create timestamps and update visuals ---
       const timestamps = predictions.map((_, i) => (i * HOP_DURATION).toFixed(2));

@@ -81,12 +81,13 @@ export function makePolarChart (logitArray, ctx) {
                 padding: {
                     top: 20,
                     bottom: 20,
-                    left: 120,
-                    right: 120
+                    left: 20,
+                    right: 20
                 }
             },
             plugins: {
                 legend: {
+                  display: false,
                   position: 'bottom'
                 },
                 tooltip: {
@@ -104,6 +105,9 @@ export function makePolarChart (logitArray, ctx) {
                   max: 1,
                   ticks: {
                     stepSize: 0.2
+                  },
+                  pointLabels: {
+                    display: false
                   }
                 }
             },
@@ -111,7 +115,7 @@ export function makePolarChart (logitArray, ctx) {
                 duration: 0 
             },
         },
-        plugins: [polarLabelPlugin]
+        // plugins: [polarLabelPlugin]
     });
 }
 
@@ -154,8 +158,9 @@ export function makeLineChart(probabilities, timestamps, ctx) {
       },
       plugins : {
         legend: {
-                  position: 'bottom'
-                },
+          display: false,
+          position: 'bottom'
+        },
         title: {
           display : true,
           text: 'Prediction Confidence Over Time'
@@ -182,3 +187,33 @@ export const classLabels = [
   'bad-timbre-stability',
   'good-sound'
 ]
+
+export function renderLegend() {
+  const legendContainer = document.getElementById('chartLegend');
+  const wrapper = legendContainer.closest('.legend-container');
+  if (wrapper) wrapper.style.display = 'block';
+
+  legendContainer.innerHTML = ''; // Clear existing content
+
+  classLabels.forEach((label, index) => {
+    const legendItem = document.createElement('div');
+    legendItem.style.display = 'flex';
+    legendItem.style.alignItems = 'center';
+    legendItem.style.gap = '6px';
+
+    const colorBox = document.createElement('span');
+    colorBox.style.display = 'inline-block';
+    colorBox.style.width = '12px';
+    colorBox.style.height = '12px';
+    colorBox.style.backgroundColor = labelColors[index];
+    colorBox.style.borderRadius = '2px';
+
+    const text = document.createElement('span');
+    text.textContent = label;
+
+    legendItem.appendChild(colorBox);
+    legendItem.appendChild(text);
+    legendContainer.appendChild(legendItem);
+  });
+}
+
