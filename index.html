@@ -44,6 +44,10 @@
 
     <!-- Right side: Polar chart spans both rows -->
     <div class="chart-box" style="grid-row: span 2;">
+      <div id="radioBtns" style="display: none;">
+        <label><input type="radio" name="chartMode" value="average" checked> Average</label>
+        <label><input type="radio" name="chartMode" value="dynamic"> Dynamic (Follow Playback)</label>
+      </div>
       <canvas id="polarChart"></canvas>
 
       <!-- Add legend section -->
