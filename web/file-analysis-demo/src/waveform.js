@@ -29,7 +29,9 @@ export function makeWaveform(wavFile, waveColor = '#383351') {
         barRadius: 2,
         plugins: [
             TimelinePlugin.create({
-                container: '#wave-timeline'
+                container: '#wave-timeline',
+                timeInterval: 1,            // Granularity of ticks
+                primaryLabelInterval: 1,       // Major label every 1 second            
             }),
             regions
         ]
