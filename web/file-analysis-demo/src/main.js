@@ -1,11 +1,11 @@
 import { decodeAndResampleWavFile, chunkWaveform, HOP_DURATION} from './audio.js';
 import { softmax, runOnnxCombinedClassifier } from './onnx.js';
-import { makePolarChart, makeLineChart, labelColors } from './chart.js';
+import { makePolarChart, makeLineChart, labelColors, getAverageProbabilities } from './chart.js';
 import { makeWaveform, showPredictionsOnWaveform } from './waveform.js';
 import { MicRecorder } from './mic.js';
 import { renderLegend } from './chart.js';
 
-
+let predictions = [];
 window.addEventListener("DOMContentLoaded", () => {
   const fileInput = document.getElementById("fileInput");
   fileInput.value = ''; // Clear any previous file selected
@@ -24,8 +24,8 @@ window.addEventListener("DOMContentLoaded", () => {
    * @param {Array<Array<number>>} predictions - The array of prediction probabilities.
    * @param {number} hopDuration - The time duration between the start of each chunk.
    */
-  function setupPlaybackAnalysis(predictions, hopDuration) {
-      if (!window.wavesurfer) return;
+  function setupPlaybackAnalysis(predictions, hopDuration, chartMode) {
+      if (!window.wavesurfer || chartMode !== 'dynamic') return;
 
       const ctxPolar = document.getElementById('polarChart').getContext('2d');
       let lastUpdatedChunkIndex = -1;
@@ -36,7 +36,7 @@ window.addEventListener("DOMContentLoaded", () => {
           // Update the chart only if the chunk is valid and has changed
           if (chunkIndex >= 0 && chunkIndex < predictions.length && chunkIndex !== lastUpdatedChunkIndex) {
               const predictionForChunk = predictions[chunkIndex];
-              makePolarChart(predictionForChunk, ctxPolar);
+              makePolarChart(predictionForChunk, ctxPolar, true);
               lastUpdatedChunkIndex = chunkIndex;
           }
       };
@@ -99,6 +99,40 @@ window.addEventListener("DOMContentLoaded", () => {
         output.innerText = "❌ No file selected.";
     }
   });
+  
+  let chartMode = 'average'; // default mode
+
+  const chartModeRadios = document.querySelectorAll('input[name="chartMode"]');
+  const ctxPolar = document.getElementById('polarChart').getContext('2d');
+
+  chartModeRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      
+      chartMode = e.target.value;
+      if (chartMode === 'dynamic') {
+        setupPlaybackAnalysis(predictions, HOP_DURATION, 'dynamic');
+        console.log("enabled dynamic playback");
+      }
+
+      if (predictions.length === 0) return;
+
+      if (chartMode === 'average') {
+        if (window.wavesurfer) {
+          console.log('Removing dynamic listeners');
+          window.wavesurfer.unAll('audioprocess');
+          window.wavesurfer.unAll('seek');
+        }
+        const averagedPredictions = getAverageProbabilities(predictions);
+        makePolarChart(averagedPredictions, ctxPolar, false);
+      } else if (chartMode === 'dynamic' && window.wavesurfer) {
+        const currentTime = window.wavesurfer.getCurrentTime();
+        const chunkIndex = Math.floor(currentTime / HOP_DURATION);
+        if (chunkIndex >= 0 && chunkIndex < predictions.length) {
+          makePolarChart(predictions[chunkIndex], ctxPolar, true);
+        }
+      }
+    });
+  });
 
   runBtn.addEventListener("click", async () => {
     if (!selectedFile) {
@@ -123,7 +157,6 @@ window.addEventListener("DOMContentLoaded", () => {
       });
 
       const numClasses = logitsArray.length / chunks.length;
-      const predictions = [];
       for (let i = 0; i < chunks.length; i++) {
         const logits = logitsArray.slice(i * numClasses, (i + 1) * numClasses);
         const probs = softmax(logits);
@@ -144,12 +177,14 @@ window.addEventListener("DOMContentLoaded", () => {
       const ctxLine = document.getElementById('lineChart').getContext('2d');
       
       // The polar chart now defaults to the first chunk's data on load
-      makePolarChart(predictions[0], ctxPolar);
+      let averagedPredictions = getAverageProbabilities(predictions);
+      makePolarChart(averagedPredictions, ctxPolar, false);
       makeLineChart(predictions, timestamps, ctxLine);
       showPredictionsOnWaveform(predictions, HOP_DURATION, labelColors);
+      document.getElementById('radioBtns').style.display = 'block';
 
       // Set up the dynamic updates for playback
-      setupPlaybackAnalysis(predictions, HOP_DURATION);
+      setupPlaybackAnalysis(predictions, HOP_DURATION, chartMode);
 
     } catch (err) {
       output.innerText = "❌ Error: " + err.message;
