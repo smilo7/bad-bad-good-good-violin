@@ -60,11 +60,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // --- Event Listeners ---
   playBtn.addEventListener('click', () => {
-    if (window.wavesurfer) window.wavesurfer.play();
+    if (window.wavesurfer) {
+      window.wavesurfer.play();
+      playBtn.style.display = 'none';
+      pauseBtn.style.display = 'inline-block';
+    }
   });
-
+  
   pauseBtn.addEventListener('click', () => {
-    if (window.wavesurfer) window.wavesurfer.pause();
+    if (window.wavesurfer) {
+      window.wavesurfer.pause();
+      playBtn.style.display = 'inline-block';
+      pauseBtn.style.display = 'none';
+    }
   });
   
   recordBtn.addEventListener("click", async () => {
