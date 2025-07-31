@@ -60,7 +60,7 @@ export async function runOnnxMelSpectrogramModel(waveformArray) {
 
 // This function runs the ONNX model for audio classification on a single waveform array.
 export async function runOnnxCombinedClassifierSingle(waveformArray) {
-  const session = await ort.InferenceSession.create('models/onnx/audio_to_class.onnx');
+  const session = await ort.InferenceSession.create('models/onnx/iphone_originals_balanced_classes_best_model.onnx');
   const input = new ort.Tensor('float32', waveformArray, [1, waveformArray.length]);
 
   const feeds = { waveform: input };
@@ -73,7 +73,7 @@ let sessionPromise = null;
 
 export async function runOnnxCombinedClassifier(chunksArray, batchSize = 32, onBatch = null) {
   if (!sessionPromise) {
-    sessionPromise = ort.InferenceSession.create('models/onnx/audio_to_class.onnx');
+    sessionPromise = ort.InferenceSession.create('models/onnx/iphone_originals_balanced_classes_best_model.onnx');
   }
   const session = await sessionPromise;
 
